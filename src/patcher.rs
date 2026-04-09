@@ -77,10 +77,6 @@ impl PatchReport {
     pub fn total_patches(&self) -> usize {
         self.patches.len()
     }
-
-    pub fn patches_by_type(&self, pt: PatchType) -> usize {
-        self.patches.iter().filter(|p| p.patch_type == pt).count()
-    }
 }
 
 // ── Decoder helpers ────────────────────────────────────────────────────────

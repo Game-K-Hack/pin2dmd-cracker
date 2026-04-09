@@ -47,7 +47,6 @@ struct CrackerApp {
     state: AppState,
     firmware_path: Option<PathBuf>,
     firmware_data: Option<Vec<u8>>,
-    firmware_info: Vec<String>,
     path_display: String,
 
     opt_timer: bool,
@@ -70,7 +69,6 @@ impl Default for CrackerApp {
             state: AppState::Idle,
             firmware_path: None,
             firmware_data: None,
-            firmware_info: Vec::new(),
             path_display: String::new(),
             opt_timer: true,
             opt_branch: true,
@@ -105,7 +103,6 @@ impl CrackerApp {
                 for line in &info {
                     self.log(line, COL_TEXT_DIM);
                 }
-                self.firmware_info = info;
                 self.path_display = path.to_string_lossy().to_string();
                 self.firmware_data = Some(data);
                 self.firmware_path = Some(path);
@@ -377,18 +374,6 @@ impl eframe::App for CrackerApp {
                                 }
                             });
 
-                            // Firmware info line
-                            if !self.firmware_info.is_empty() {
-                                ui.add_space(4.0);
-                                for info in &self.firmware_info {
-                                    ui.label(
-                                        egui::RichText::new(info)
-                                            .monospace()
-                                            .size(9.0)
-                                            .color(COL_TEXT_DIM),
-                                    );
-                                }
-                            }
                         });
 
                         ui.add_space(2.0);
@@ -508,43 +493,19 @@ impl eframe::App for CrackerApp {
 
                             ui.add_space(8.0);
 
-                            // Summary line
-                            if let Some(ref report) = self.report {
-                                let summary = format!(
-                                    "{} keygen | {} timer | {} branch | {} key_bypass",
-                                    report.patches_by_type(PatchType::Keygen),
-                                    report.patches_by_type(PatchType::Timer),
-                                    report.patches_by_type(PatchType::Branch),
-                                    report.patches_by_type(PatchType::KeyBypass),
-                                );
-                                ui.label(
-                                    egui::RichText::new(summary)
-                                        .monospace()
-                                        .size(9.5)
-                                        .color(COL_TEXT_DIM),
-                                );
-                                ui.add_space(4.0);
-                            }
-
                             // Buttons row
                             ui.horizontal(|ui| {
                                 let any_patch = self.opt_timer
                                     || self.opt_branch
                                     || self.opt_keygen
                                     || self.opt_key_bypass;
-                                let can_crack =
-                                    self.firmware_data.is_some() && any_patch;
+                                let can_crack = self.firmware_data.is_some() && any_patch && self.state != AppState::Done;
 
                                 // Crack button
-                                let crack_label = if self.state == AppState::Done {
-                                    "Crack again"
-                                } else {
-                                    "Crack"
-                                };
                                 let crack_btn = ui.add_enabled(
                                     can_crack,
                                     egui::Button::new(
-                                        egui::RichText::new(crack_label)
+                                        egui::RichText::new("Crack")
                                             .size(12.0)
                                             .color(if can_crack {
                                                 COL_TEXT_BRIGHT
