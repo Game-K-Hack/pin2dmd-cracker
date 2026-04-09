@@ -979,6 +979,7 @@ dependencies = [
  "ahash",
  "egui",
  "enum-map",
+ "image",
  "log",
  "mime_guess2",
  "profiling",
@@ -2511,6 +2512,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "image",
  "rfd",
 ]
 

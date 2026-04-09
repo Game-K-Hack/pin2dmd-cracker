@@ -10,9 +10,9 @@ use std::time::Instant;
 // ── CODEX-style dark palette ───────────────────────────────────────────────
 
 const COL_BG: egui::Color32 = egui::Color32::from_rgb(15, 15, 18);
-const COL_BG_PANEL: egui::Color32 = egui::Color32::from_rgb(22, 22, 28);
+const COL_BG_PANEL: egui::Color32 = egui::Color32::from_rgba_premultiplied(22, 22, 28, 230);
 const COL_BG_INPUT: egui::Color32 = egui::Color32::from_rgb(10, 10, 14);
-const COL_BG_CONSOLE: egui::Color32 = egui::Color32::from_rgb(5, 5, 8);
+const COL_BG_CONSOLE: egui::Color32 = egui::Color32::from_rgba_premultiplied(5, 5, 8, 200);
 const COL_BORDER: egui::Color32 = egui::Color32::from_rgb(55, 55, 65);
 const COL_BORDER_BRIGHT: egui::Color32 = egui::Color32::from_rgb(80, 80, 95);
 const COL_TEXT: egui::Color32 = egui::Color32::from_rgb(200, 200, 210);
@@ -61,6 +61,7 @@ struct CrackerApp {
 
     start_time: Instant,
     log_lines: Vec<(String, egui::Color32)>,
+    bg_texture: Option<egui::TextureHandle>,
 }
 
 impl Default for CrackerApp {
@@ -83,6 +84,7 @@ impl Default for CrackerApp {
                 ("PIN2DMD Firmware Cracker initialized".into(), COL_TEXT_DIM),
                 ("Waiting for firmware file...".into(), COL_TEXT_DIM),
             ],
+            bg_texture: None,
         }
     }
 }
@@ -219,19 +221,21 @@ fn section_frame(ui: &mut egui::Ui, title: &str, add_contents: impl FnOnce(&mut 
                 .color(COL_TEXT_BRIGHT)
                 .strong(),
         );
+        ui.set_width(480.0);
         ui.add_space(6.0);
         add_contents(ui);
     });
 }
 
-fn dark_button(ui: &mut egui::Ui, text: &str, width: f32) -> bool {
+fn dark_button(ui: &mut egui::Ui, text: &str, width: f32, height: Option<f32>) -> bool {
+    let h = height.unwrap_or(28.0);
     let btn = egui::Button::new(
         egui::RichText::new(text).size(11.5).color(COL_TEXT),
     )
     .fill(COL_BTN_BG)
     .stroke(egui::Stroke::new(1.0, COL_BORDER))
     .corner_radius(2.0)
-    .min_size(egui::vec2(width, 28.0));
+    .min_size(egui::vec2(width, h)); 
     ui.add(btn).clicked()
 }
 
@@ -268,14 +272,44 @@ impl eframe::App for CrackerApp {
 
         ctx.request_repaint();
 
+        // ── Load background texture (once) ────────────────────────────
+        if self.bg_texture.is_none() {
+            let image_data = include_bytes!("background.png");
+            let img = image::load_from_memory(image_data).expect("Failed to load background.png");
+            let rgba = img.to_rgba8();
+            let size = [rgba.width() as usize, rgba.height() as usize];
+            let color_image = egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw());
+            self.bg_texture = Some(ctx.load_texture(
+                "background",
+                color_image,
+                egui::TextureOptions::LINEAR,
+            ));
+        }
+
         // ── Single central panel with vertical layout ──────────────────
         egui::CentralPanel::default()
             .frame(
                 egui::Frame::new()
-                    .fill(COL_BG)
+                    .fill(egui::Color32::TRANSPARENT)
                     .inner_margin(egui::Margin::symmetric(6, 6)),
             )
             .show(ctx, |ui| {
+                // Paint background image
+                if let Some(tex) = &self.bg_texture {
+                    let rect = ui.max_rect();
+                    ui.painter().image(
+                        tex.id(),
+                        rect,
+                        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                        egui::Color32::WHITE,
+                    );
+                    // Semi-transparent overlay for readability
+                    ui.painter().rect_filled(
+                        rect,
+                        0.0,
+                        egui::Color32::from_rgba_unmultiplied(15, 15, 18, 50),
+                    );
+                }
                 // Constrain width like CODEX installer
                 let max_w = 520.0;
                 let avail = ui.available_width();
@@ -290,9 +324,9 @@ impl eframe::App for CrackerApp {
                         ui.vertical_centered(|ui| {
                             // Metallic color animation
                             let t = (elapsed * 0.4).sin() * 0.5 + 0.5;
-                            let r = (140.0 + t * 80.0) as u8;
-                            let g = (130.0 + t * 60.0) as u8;
-                            let b = (160.0 + t * 40.0) as u8;
+                            let r = (200.0 + t * 80.0) as u8;
+                            let g = (175.0 + t * 60.0) as u8;
+                            let b = (60.0 + t * 40.0) as u8;
                             let banner_col = egui::Color32::from_rgb(r, g, b);
 
                             ui.label(
@@ -315,7 +349,7 @@ impl eframe::App for CrackerApp {
                                     .inner_margin(egui::Margin::symmetric(6, 4));
 
                                 field.show(ui, |ui| {
-                                    ui.set_min_width(340.0);
+                                    ui.set_width(350.0);
                                     let display = if self.path_display.is_empty() {
                                         "No file selected..."
                                     } else {
@@ -333,7 +367,7 @@ impl eframe::App for CrackerApp {
                                     );
                                 });
 
-                                if dark_button(ui, "Browse...", 70.0) {
+                                if dark_button(ui, "Browse...", 100.0, Some(22.0)) {
                                     let dialog = rfd::FileDialog::new()
                                         .add_filter("Binary firmware", &["bin"])
                                         .add_filter("All files", &["*"]);
@@ -525,7 +559,7 @@ impl eframe::App for CrackerApp {
                                     })
                                     .stroke(egui::Stroke::new(1.0, COL_BORDER))
                                     .corner_radius(2.0)
-                                    .min_size(egui::vec2(160.0, 30.0)),
+                                    .min_size(egui::vec2(236.5, 30.0)),
                                 );
                                 if crack_btn.clicked() {
                                     self.run_patch();
@@ -551,7 +585,7 @@ impl eframe::App for CrackerApp {
                                     })
                                     .stroke(egui::Stroke::new(1.0, COL_BORDER))
                                     .corner_radius(2.0)
-                                    .min_size(egui::vec2(160.0, 30.0)),
+                                    .min_size(egui::vec2(236.5, 30.0)),
                                 );
                                 if save_btn.clicked() {
                                     self.save_firmware();
@@ -613,10 +647,10 @@ impl eframe::App for CrackerApp {
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([540.0, 680.0])
-            .with_min_inner_size([480.0, 580.0])
+            .with_inner_size([540.0, 574.0])
             .with_title("PIN2DMD Cracker")
-            .with_resizable(true),
+            .with_resizable(false)
+            .with_maximize_button(false),
         ..Default::default()
     };
 
