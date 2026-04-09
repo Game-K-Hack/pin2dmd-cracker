@@ -11,6 +11,7 @@ egui = "0.31"
 egui_extras = { version = "0.31", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 rfd = "0.15"
+rodio = "0.20"
 chrono = "0.4"
 
 [profile.release]

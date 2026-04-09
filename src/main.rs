@@ -4,6 +4,8 @@ mod patcher;
 
 use eframe::egui;
 use patcher::{PatchOptions, PatchReport, PatchType};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+use std::io::Cursor;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -61,10 +63,37 @@ struct CrackerApp {
     start_time: Instant,
     log_lines: Vec<(String, egui::Color32)>,
     bg_texture: Option<egui::TextureHandle>,
+    title_texture: Option<egui::TextureHandle>,
+
+    // Audio
+    _audio_stream: Option<OutputStream>,
+    _audio_handle: Option<OutputStreamHandle>,
+    audio_sink: Option<Sink>,
+    music_volume: f32,
+    music_playing: bool,
 }
 
 impl Default for CrackerApp {
     fn default() -> Self {
+        // Setup audio stream and sink
+        let (stream, handle, sink) = match OutputStream::try_default() {
+            Ok((stream, handle)) => {
+                match Sink::try_new(&handle) {
+                    Ok(sink) => {
+                        let music_data = include_bytes!("music.mp3");
+                        let cursor = Cursor::new(music_data.as_ref());
+                        if let Ok(source) = Decoder::new(cursor) {
+                            sink.append(source);
+                            sink.set_volume(0.3);
+                        }
+                        (Some(stream), Some(handle), Some(sink))
+                    }
+                    Err(_) => (Some(stream), Some(handle), None),
+                }
+            }
+            Err(_) => (None, None, None),
+        };
+
         Self {
             state: AppState::Idle,
             firmware_path: None,
@@ -83,6 +112,12 @@ impl Default for CrackerApp {
                 ("Waiting for firmware file...".into(), COL_TEXT_DIM),
             ],
             bg_texture: None,
+            title_texture: None,
+            _audio_stream: stream,
+            _audio_handle: handle,
+            audio_sink: sink,
+            music_volume: 0.3,
+            music_playing: true,
         }
     }
 }
@@ -283,6 +318,20 @@ impl eframe::App for CrackerApp {
             ));
         }
 
+        // ── Load title texture (once) ─────────────────────────────────
+        if self.title_texture.is_none() {
+            let image_data = include_bytes!("title.png");
+            let img = image::load_from_memory(image_data).expect("Failed to load title.png");
+            let rgba = img.to_rgba8();
+            let size = [rgba.width() as usize, rgba.height() as usize];
+            let color_image = egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw());
+            self.title_texture = Some(ctx.load_texture(
+                "title",
+                color_image,
+                egui::TextureOptions::LINEAR,
+            ));
+        }
+
         // ── Single central panel with vertical layout ──────────────────
         egui::CentralPanel::default()
             .frame(
@@ -317,21 +366,57 @@ impl eframe::App for CrackerApp {
                     ui.vertical(|ui| {
                         ui.set_max_width(max_w);
 
-                        // ── Banner ─────────────────────────────────────
-                        ui.vertical_centered(|ui| {
-                            // Metallic color animation
-                            let t = (elapsed * 0.4).sin() * 0.5 + 0.5;
-                            let r = (200.0 + t * 80.0) as u8;
-                            let g = (175.0 + t * 60.0) as u8;
-                            let b = (60.0 + t * 40.0) as u8;
-                            let banner_col = egui::Color32::from_rgb(r, g, b);
+                        // ── Banner + music controls ────────────────────
+                        ui.horizontal(|ui| {
+                            // Title image centered, taking most of the width
+                            ui.vertical_centered(|ui| {
+                                if let Some(tex) = &self.title_texture {
+                                    let img_size = tex.size_vec2();
+                                    let scale = (max_w / img_size.x).min(1.0);
+                                    let display_size = egui::vec2(img_size.x * scale, img_size.y * scale);
+                                    ui.image(egui::load::SizedTexture::new(tex.id(), display_size));
+                                }
+                            });
+                        });
 
-                            ui.label(
-                                egui::RichText::new("HARLOCK")
-                                    .family(egui::FontFamily::Name("SpaceAge".into()))
-                                    .size(64.0)
-                                    .color(banner_col),
-                            );
+                        // Music controls - small, right-aligned
+                        ui.horizontal(|ui| {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.add_space(12.0);
+
+                                // Volume slider
+                                let slider = egui::Slider::new(&mut self.music_volume, 0.0..=1.0)
+                                    .show_value(false)
+                                    .custom_formatter(|_, _| String::new());
+                                let slider_response = ui.add_sized([80.0, 14.0], slider);
+                                if slider_response.changed() {
+                                    if let Some(ref sink) = self.audio_sink {
+                                        sink.set_volume(self.music_volume);
+                                    }
+                                }
+
+                                // Play/Stop button
+                                let icon = if self.music_playing { "\u{23F9}" } else { "\u{25B6}" };
+                                let btn = ui.add(
+                                    egui::Button::new(
+                                        egui::RichText::new(icon).size(10.0).color(COL_TEXT_DIM),
+                                    )
+                                    .fill(egui::Color32::TRANSPARENT)
+                                    .stroke(egui::Stroke::NONE)
+                                    .min_size(egui::vec2(18.0, 14.0)),
+                                );
+                                if btn.clicked() {
+                                    if let Some(ref sink) = self.audio_sink {
+                                        if self.music_playing {
+                                            sink.pause();
+                                            self.music_playing = false;
+                                        } else {
+                                            sink.play();
+                                            self.music_playing = true;
+                                        }
+                                    }
+                                }
+                            });
                         });
 
                         ui.add_space(6.0);
@@ -608,7 +693,7 @@ impl eframe::App for CrackerApp {
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([540.0, 570.0])
+            .with_inner_size([540.0, 620.0])
             .with_title("PIN2DMD Cracker")
             .with_resizable(false)
             .with_maximize_button(false),
@@ -618,22 +703,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "PIN2DMD Cracker",
         options,
-        Box::new(|cc| {
-            // Load custom "Space Age" font
-            let mut fonts = egui::FontDefinitions::default();
-            fonts.font_data.insert(
-                "SpaceAge".to_owned(),
-                std::sync::Arc::new(egui::FontData::from_static(
-                    include_bytes!("space age.ttf"),
-                )),
-            );
-            fonts
-                .families
-                .entry(egui::FontFamily::Name("SpaceAge".into()))
-                .or_default()
-                .insert(0, "SpaceAge".to_owned());
-            cc.egui_ctx.set_fonts(fonts);
-
+        Box::new(|_cc| {
             Ok(Box::new(CrackerApp::default()))
         }),
     )
