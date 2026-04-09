@@ -288,7 +288,7 @@ impl eframe::App for CrackerApp {
             .frame(
                 egui::Frame::new()
                     .fill(egui::Color32::TRANSPARENT)
-                    .inner_margin(egui::Margin::symmetric(6, 6)),
+                    .inner_margin(egui::Margin::symmetric(0, 0)),
             )
             .show(ctx, |ui| {
                 // Paint background image
@@ -608,7 +608,7 @@ impl eframe::App for CrackerApp {
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([540.0, 574.0])
+            .with_inner_size([540.0, 570.0])
             .with_title("PIN2DMD Cracker")
             .with_resizable(false)
             .with_maximize_button(false),
