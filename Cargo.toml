@@ -1,0 +1,22 @@
+[package]
+name = "pin2dmd_cracker"
+version = "1.0.0"
+edition = "2021"
+authors = ["PIN2DMD Crack Team"]
+description = "PIN2DMD Firmware Patcher - Scene Edition"
+
+[dependencies]
+eframe = { version = "0.31", features = ["default"] }
+egui = "0.31"
+egui_extras = "0.31"
+rfd = "0.15"
+chrono = "0.4"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+
+[[bin]]
+name = "pin2dmd_cracker"
+path = "src/main.rs"
