@@ -691,12 +691,24 @@ impl eframe::App for CrackerApp {
 }
 
 fn main() -> eframe::Result<()> {
+    // Load window icon
+    let icon_data = include_bytes!("icon.png");
+    let icon_img = image::load_from_memory(icon_data).expect("Failed to load icon.png");
+    let icon_rgba = icon_img.to_rgba8();
+    let (icon_w, icon_h) = (icon_rgba.width(), icon_rgba.height());
+    let icon = egui::IconData {
+        rgba: icon_rgba.into_raw(),
+        width: icon_w,
+        height: icon_h,
+    };
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([540.0, 620.0])
             .with_title("PIN2DMD Cracker")
             .with_resizable(false)
-            .with_maximize_button(false),
+            .with_maximize_button(false)
+            .with_icon(std::sync::Arc::new(icon)),
         ..Default::default()
     };
 
