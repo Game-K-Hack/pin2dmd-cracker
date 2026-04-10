@@ -1,3 +1,24 @@
+<p align="center" >
+    <img src="./src/icon.png" width=150 />
+</p>
+
+<br>
+
+<div align="center">
+  <a href="https://github.com/Game-K-Hack/pin2dmd-cracker/releases/tag/0.1.0">
+    <img src="https://img.shields.io/static/v1?label=release&message=v0.1.0&color=blue" alt="Release - v0.1.0" />
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/static/v1?label=version&message=stable&color=green" alt="Version - Stable" />
+  </a>
+  <a href="https://creativecommons.org/licenses/by-nc-sa/4.0">
+    <img src="https://img.shields.io/badge/Licence-CC_BY_NC_SA_4.0-yellow" alt="License" />
+  </a>
+</div>
+
+<br>
+<br>
+
 [🇫🇷 version française](https://github.com/Game-K-Hack/pin2dmd-cracker/blob/master/assets/README.fr.md)
 
 ## PIN2DMD: Reserved for Enthusiasts Only
