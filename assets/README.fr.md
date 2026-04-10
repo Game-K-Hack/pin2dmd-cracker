@@ -1,4 +1,4 @@
-[🇫🇷 version française](https://github.com/Game-K-Hack/pin2dmd-cracker/blob/master/assets/README.fr.md)
+[🇬🇧 version anglaise](https://github.com/Game-K-Hack/pin2dmd-cracker/blob/master/README.md)
 
 ## PIN2DMD : Réservé seulement pour les passionés
 
