@@ -2,8 +2,8 @@
 name = "pin2dmd_cracker"
 version = "1.0.0"
 edition = "2021"
-authors = ["PIN2DMD Crack Team"]
-description = "PIN2DMD Firmware Patcher - Scene Edition"
+authors = ["harlock"]
+description = "PIN2DMD Firmware Patcher"
 
 [dependencies]
 eframe = { version = "0.31", features = ["default"] }
