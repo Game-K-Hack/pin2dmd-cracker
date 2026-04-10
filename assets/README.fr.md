@@ -29,4 +29,4 @@ Si vous utilisez ce travail pour faire de l'argent, vous vous exposez à des pou
 
 ### Visuel
 
-![screenshot](./assets/image.png)
+![screenshot](./image.png)
